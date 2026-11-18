@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS datos (
+  codigo TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  actualizado TEXT NOT NULL
+);

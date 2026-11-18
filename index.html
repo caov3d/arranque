@@ -77,6 +77,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .plus{width:40px;height:40px;border-radius:50%;background:var(--card2);display:grid;place-items:center;flex:none}
 .plus svg{width:18px;height:18px}
 .foot{margin-top:auto;padding-top:18px;text-align:center;font-size:12px;color:#5a5e68}
+.syncline{display:block;margin:2px auto 8px;font-size:13px;color:var(--ok);font-weight:600;padding:6px 10px}
+.syncline.warn{color:var(--mut)}
+.codebig{font-size:26px;font-weight:800;letter-spacing:2px;text-align:center;background:var(--card2);border-radius:16px;padding:16px;margin:14px 0 10px;font-variant-numeric:tabular-nums;user-select:text;-webkit-user-select:text}
+.ghost{width:100%;height:50px;border-radius:16px;background:var(--card2);font-weight:700;font-size:16px;margin-bottom:18px}
+.sheet input.codein{font-size:22px;letter-spacing:2px;text-transform:uppercase;height:60px;margin:10px 0 12px}
 .infolink{color:var(--mut);font-size:14px;font-weight:600;padding:10px;text-decoration:underline;text-underline-offset:3px}
 .rules{list-style:none;margin:14px 0 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;flex:1}
 .rules li{display:flex;gap:12px;font-size:15px;line-height:1.38}
@@ -195,7 +200,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
       <div class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
     </button>
   </div>
-  <div class="foot"><button id="infobtn" class="infolink">¿Cómo está pensada?</button><div id="ver">Arranque</div></div>
+  <div class="foot"><button id="infobtn" class="infolink">¿Cómo está pensada?</button><button id="sync" class="syncline">☁︎</button><div id="ver">Arranque</div></div>
 </section>
 
 <!-- ================= ENTRENO ================= -->
@@ -262,12 +267,23 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
     <button class="go" id="iclose">Entendido</button>
   </div>
 </div>
+<div class="sheetbg" id="ssheet">
+  <div class="sheet">
+    <h3>Respaldo automático</h3>
+    <p class="mut">Todo se guarda solo después de cada entreno. Este es tu código: con él recuperas todo en otro celular. Cópialo y guárdalo en Notas.</p>
+    <div class="codebig" id="mycode"></div>
+    <button class="ghost" id="copycode">Copiar código</button>
+    <p class="mut">¿Celular nuevo? Escribe tu código:</p>
+    <input class="codein" id="codein" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
+    <button class="go" id="restore">Recuperar mis datos</button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="confetti" id="confetti"></div>
 
 <script>
 "use strict";
-const VERSION = "v2026.11.18-3";
+const VERSION = "v2026.11.18-4";
 const KEY = "arranque_v1";
 
 /* =========================================================
@@ -405,7 +421,39 @@ requestAnimationFrame(anim);
 const $=id=>document.getElementById(id);
 function load(){ try{ return Object.assign({level:1,hist:{},weights:[],mute:false,swap:{}}, JSON.parse(localStorage.getItem(KEY)||"{}")); }catch(e){ return {level:1,hist:{},weights:[],mute:false,swap:{}}; } }
 let D = load();
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){} }
+function write(){ try{ localStorage.setItem(KEY, JSON.stringify(D)); }catch(e){} }
+function save(){ D.ts=Date.now(); D.dirty=1; write(); schedulePush(); }
+
+/* ---- Respaldo automático en la nube (Cloudflare) ----
+   Cada celular tiene un código secreto. Después de cada cambio se guarda solo;
+   si no hay internet, se guarda apenas vuelva. */
+const API="https://arranque-respaldo.caov3dv1.workers.dev/v1/";
+const ALFA="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function newCode(){ const a=new Uint8Array(12); crypto.getRandomValues(a); return Array.from(a,x=>ALFA[x%32]).join(""); }
+const fmtCode=c=>c.replace(/(.{4})(?=.)/g,"$1-");
+if(!D.code){ D.code=newCode(); D.dirty=1; D.ts=Date.now(); write(); }
+let pushT=null, pushing=false;
+function schedulePush(){ clearTimeout(pushT); pushT=setTimeout(push,1500); }
+async function push(){
+  if(pushing||!D.dirty||!D.code) return; pushing=true;
+  const data={...D}; delete data.code; delete data.dirty; delete data.lastSync; delete data.ts;
+  const ts=D.ts;
+  try{
+    const r=await fetch(API+D.code,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({ts,data})});
+    if(r.ok){ if(D.ts===ts) D.dirty=0; D.lastSync=Date.now(); write(); }
+  }catch(e){}
+  pushing=false; renderSync();
+}
+function renderSync(){
+  const el=document.getElementById("sync"); if(!el) return;
+  if(!D.dirty && D.lastSync){
+    const d=new Date(D.lastSync), hoy=dkey(d)===dkey();
+    el.textContent="☁︎ Respaldado "+(hoy?"hoy ":d.toLocaleDateString("es-CO",{day:"numeric",month:"short"})+" ")+d.toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit"});
+    el.classList.remove("warn");
+  } else { el.textContent="☁︎ Se respalda al tener internet"; el.classList.add("warn"); }
+}
+window.addEventListener("online",push);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") push(); });
 // Fecha LOCAL (Colombia), nunca toISOString: en la noche daría el día siguiente.
 const dkey=(d=new Date())=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
@@ -457,6 +505,7 @@ function renderHome(){
   }
   drawSpark();
   $("ver").textContent="Arranque · "+VERSION;
+  renderSync();
 }
 function drawSpark(){
   const W=D.weights.slice(-12), sp=$("spark");
@@ -646,10 +695,28 @@ function confetti(){
 function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===id)); }
 
 $("go").onclick=startRun;
+$("sync").onclick=()=>{ $("mycode").textContent=fmtCode(D.code); $("codein").value=""; $("ssheet").classList.add("on"); push(); };
+$("ssheet").onclick=e=>{ if(e.target.id==="ssheet") $("ssheet").classList.remove("on"); };
+$("copycode").onclick=async()=>{ try{ await navigator.clipboard.writeText(fmtCode(D.code)); toast("Código copiado"); }catch(e){ toast("Mantén presionado el código para copiarlo"); } };
+$("restore").onclick=async()=>{
+  const c=$("codein").value.toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(c.length!==12){ toast("El código tiene 12 letras y números"); return; }
+  if(c===D.code){ toast("Ese es el código de este celular"); return; }
+  try{
+    const r=await fetch(API+c);
+    if(r.status===404){ toast("No encontré ese código. Revísalo."); return; }
+    if(!r.ok) throw 0;
+    const j=await r.json();
+    if(!confirm("Se van a cargar los datos guardados con ese código y reemplazan los de este celular. ¿Seguir?")) return;
+    D=Object.assign({level:1,hist:{},weights:[],mute:false,swap:{}}, j.data, {code:c, ts:j.ts, dirty:0, lastSync:Date.now(), seen:1});
+    write(); $("ssheet").classList.remove("on"); renderHome(); toast("¡Listo! Tus datos volvieron");
+  }catch(e){ toast("Sin conexión. Inténtalo con internet."); }
+};
 $("infobtn").onclick=()=>$("isheet").classList.add("on");
 $("iclose").onclick=()=>{ $("isheet").classList.remove("on"); D.seen=1; save(); };
 $("isheet").onclick=e=>{ if(e.target.id==="isheet") $("iclose").onclick(); };
 renderHome();
+setTimeout(push,800);
 // si queda abierta de un día para otro, se refresca al volver
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && !RUN && $("home").classList.contains("on")) renderHome(); });
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
