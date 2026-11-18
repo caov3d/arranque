@@ -27,6 +27,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .screen{position:fixed;inset:0;display:none;flex-direction:column;
   padding:calc(var(--safe-t) + 18px) 20px calc(var(--safe-b) + 18px);overflow-y:auto}
 .screen.on{display:flex}
+#home>*{flex-shrink:0}  /* sin esto, en pantallas bajitas la tarjeta se aplasta y el botón Empezar desaparece */
 .mut{color:var(--mut)}
 
 /* ---------- Inicio ---------- */
@@ -77,7 +78,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .plus svg{width:18px;height:18px}
 .foot{margin-top:auto;padding-top:18px;text-align:center;font-size:12px;color:#5a5e68}
 .infolink{color:var(--mut);font-size:14px;font-weight:600;padding:10px;text-decoration:underline;text-underline-offset:3px}
-.rules{list-style:none;margin:14px 0 18px;display:flex;flex-direction:column;gap:12px;max-height:56vh;overflow-y:auto}
+.rules{list-style:none;margin:14px 0 16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;flex:1}
 .rules li{display:flex;gap:12px;font-size:15px;line-height:1.38}
 .rules li b{color:var(--tx)}
 .rules li span.n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--card2);display:grid;place-items:center;font-weight:800;font-size:13px;color:var(--sun)}
@@ -141,8 +142,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* ---------- Hoja de peso ---------- */
 .sheetbg{position:fixed;inset:0;background:#000a;display:none;align-items:flex-end;z-index:20}
 .sheetbg.on{display:flex}
-.sheet{width:100%;background:var(--card);border-radius:28px 28px 0 0;padding:22px 20px calc(var(--safe-b) + 20px);animation:up .25s ease-out}
-@keyframes up{from{transform:translateY(100%)}}
+.sheet{width:100%;background:var(--card);border-radius:28px 28px 0 0;padding:22px 20px calc(var(--safe-b) + 20px);animation:fade .2s ease-out;
+  display:flex;flex-direction:column;max-height:calc(100vh - var(--safe-t) - 24px);max-height:calc(100dvh - var(--safe-t) - 24px)}
+.sheet>.go{flex:none}
+@keyframes fade{from{opacity:0}}
 .sheet h3{font-size:20px;margin-bottom:4px}
 .sheet input{width:100%;height:72px;margin:16px 0;border-radius:18px;border:0;background:var(--card2);color:var(--tx);
   font-size:38px;font-weight:800;text-align:center;font-family:inherit;outline:none}
@@ -250,13 +253,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   <div class="sheet">
     <h3>Cómo está pensada</h3>
     <ul class="rules">
-      <li><span class="n">1</span><div><b>Sin saltos.</b> Todo se hace sin despegar los pies del piso: no molesta a los vecinos y cuida rodillas y tobillos.</div></li>
-      <li><span class="n">2</span><div><b>La espalda va recta en la mañana.</b> Al despertar los discos de la columna están más hinchados. Por eso no hay abdominales clásicos ni "toca tus pies": el abdomen se trabaja con planchas, bicho muerto y perro de caza.</div></li>
-      <li><span class="n">3</span><div><b>Calienta en movimiento.</b> Primero despertar la espalda y los glúteos, luego subir el pulso. Los estiramientos quietos van al final.</div></li>
-      <li><span class="n">4</span><div><b>Fuerza más cardio.</b> Para bajar de peso sin perder músculo se combinan las dos. En el esfuerzo deberías poder decir solo pocas palabras.</div></li>
-      <li><span class="n">5</span><div><b>Cuatro días que rotan.</b> Piernas, brazos y abdomen, cuerpo completo y un día suave. Así entrenas todos los días y cada músculo descansa.</div></li>
-      <li><span class="n">6</span><div><b>Sube cuando sea fácil.</b> Cada ejercicio cambia según tu nivel. Si te parece fácil, la app sube sola.</div></li>
-      <li><span class="n">!</span><div><b>Molestia sí, dolor no.</b> Si algo duele de forma aguda, salta ese ejercicio con ⏭. Toma un vaso de agua antes de empezar. La comida pesa más que el ejercicio para bajar de peso: esto es el hábito, no todo el plan.</div></li>
+      <li><span class="n">1</span><div><b>Saltos simulados.</b> Sin caer duro: no suena donde los vecinos.</div></li>
+      <li><span class="n">2</span><div><b>Espalda recta en la mañana.</b> Por eso no hay abdominales clásicos.</div></li>
+      <li><span class="n">3</span><div><b>4 rutinas que rotan.</b> Cada músculo descansa.</div></li>
+      <li><span class="n">4</span><div><b>Si es fácil, sube sola.</b></div></li>
+      <li><span class="n">!</span><div><b>Si algo duele, sáltalo</b> con ⏭.</div></li>
     </ul>
     <button class="go" id="iclose">Entendido</button>
   </div>
@@ -266,7 +267,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 <script>
 "use strict";
-const VERSION = "v2026.11.18-2";
+const VERSION = "v2026.11.18-3";
 const KEY = "arranque_v1";
 
 /* =========================================================
@@ -303,43 +304,43 @@ const EX = {
   stepSuave:{n:"Paso lateral con brazos",t:"Un pie al lado y brazos arriba. Alterna, ritmo suave.",a:F,b:P(F,ARMSUP,{rk:[59,72],rf:[66,91]}),v:.9},
 
   // ---- circuito ----
-  stepJack:{n:"Jacks sin salto",t:"Pie al lado y brazos arriba, alternando rápido. Sin despegar del piso.",a:F,b:P(F,ARMSUP,{rk:[59,72],rf:[66,91]}),v:1.7,c:1,
-    lv:["Ritmo cómodo","Ritmo rápido","Lo más rápido que puedas"]},
-  sentadilla:{n:"Sentadilla",t:"Cadera atrás como si te sentaras. Rodillas en la línea de los pies.",a:S,b:SQUAT,v:.9,side:1,
+  stepJack:{n:"Jumping jacks",t:"Abre y cierra en puntas, caída suave.",a:F,b:P(F,ARMSUP,{lk:[43,72],lf:[37,91],rk:[57,72],rf:[63,91]}),v:1.7,c:1,
+    lv:["Un pie a la vez","Rebote suave en puntas","Rápido y en puntas"]},
+  sentadilla:{n:"Sentadilla",t:"Cadera atrás, pecho arriba.",a:S,b:SQUAT,v:.9,side:1,
     lv:["Hasta tocar una silla","Profunda y controlada","Baja en 3 segundos, sube rápido"]},
-  rodillas:{n:"Rodillas arriba",t:"Sin saltar: marcha rápida subiendo las rodillas a la cadera.",a:P(F,{lk:[44,55],lf:[45,72],rh:[59,36],re:[58,40]}),b:P(F,{rk:[56,55],rf:[55,72],lh:[41,36],le:[42,40]}),v:2.4,c:1,
+  rodillas:{n:"Rodillas arriba",t:"Rodillas a la altura de la cadera.",a:P(F,{lk:[44,55],lf:[45,72],rh:[59,36],re:[58,40]}),b:P(F,{rk:[56,55],rf:[55,72],lh:[41,36],le:[42,40]}),v:2.4,c:1,
     lv:["Marcha ágil","Marcha rápida","A toda velocidad, brazos fuertes"]},
-  zancada:{n:"Zancada hacia atrás",t:"Paso atrás y baja la rodilla casi al piso. Alterna piernas.",a:P(S,{le:[47,40],lh:[48,52]}),b:P(S,{p:[48,66],s:[48,41],h:[48,29],rk:[62,70],rf:[63,91],lk:[40,86],lf:[29,91],le:[47,54],lh:[48,65],re:[49,54],rh:[50,65]}),v:.7,side:1,
+  zancada:{n:"Zancada hacia atrás",t:"Paso atrás, rodilla casi al piso.",a:P(S,{le:[47,40],lh:[48,52]}),b:P(S,{p:[48,66],s:[48,41],h:[48,29],rk:[62,70],rf:[63,91],lk:[40,86],lf:[29,91],le:[47,54],lh:[48,65],re:[49,54],rh:[50,65]}),v:.7,side:1,
     lv:["Con una mano en la pared","Sin apoyo","Baja en 3 segundos"]},
-  escaladores:{n:"Escaladores",t:"En plancha, lleva una rodilla al pecho y luego la otra. Espalda plana.",a:P(PLANK,{p:[45,77],rk:[60,80],rf:[52,89]}),b:P(PLANK,{p:[45,77],lk:[60,80],lf:[52,89]}),v:1.8,side:1,c:1,
+  escaladores:{n:"Escaladores",t:"Rodillas al pecho, espalda plana.",a:P(PLANK,{p:[45,77],rk:[60,80],rf:[52,89]}),b:P(PLANK,{p:[45,77],lk:[60,80],lf:[52,89]}),v:1.8,side:1,c:1,
     lv:["Lentos, paso a paso","Ritmo constante","Rápidos sin subir la cadera"]},
-  puente:{n:"Puente de glúteo",t:"Acostado boca arriba, sube la cadera y aprieta arriba.",a:LIE,b:P(LIE,{p:[52,74],s:[30,86],h:[19,84],lk:[69,70],rk:[70,70]}),v:.7,side:1,
+  puente:{n:"Puente de glúteo",t:"Sube la cadera y aprieta.",a:LIE,b:P(LIE,{p:[52,74],s:[30,86],h:[19,84],lk:[69,70],rk:[70,70]}),v:.7,side:1,
     lv:["Dos piernas","Dos piernas, 2 segundos arriba","Una pierna, cambia a la mitad"]},
-  boxeo:{n:"Boxeo al aire",t:"Golpes rápidos, abdomen apretado, rodillas sueltas.",
+  boxeo:{n:"Boxeo al aire",t:"Abdomen apretado, rodillas sueltas.",
     a:{h:[50,15],s:[50,27],p:[50,52],lk:[46,72],lf:[42,91],rk:[56,72],rf:[60,91],le:[55,38],lh:[59,28],re:[62,28],rh:[75,27]},
     b:{h:[50,15],s:[50,27],p:[50,52],lk:[46,72],lf:[42,91],rk:[56,72],rf:[60,91],le:[62,28],lh:[75,27],re:[56,38],rh:[60,28]},v:2.4,side:1,c:1,
     lv:["Golpes suaves","Golpes rápidos","Rápidos y bajando en sentadilla"]},
-  flexion:{n:"Flexiones",t:"Cuerpo recto como una tabla. Exhala al subir.",a:PLANK,b:P(PLANK,{s:[70,80],h:[80,77],p:[45,85],lk:[30,88],rk:[31,88],le:[60,84],re:[61,84]}),v:.7,side:1,
+  flexion:{n:"Flexiones",t:"Cuerpo recto como una tabla.",a:PLANK,b:P(PLANK,{s:[70,80],h:[80,77],p:[45,85],lk:[30,88],rk:[31,88],le:[60,84],re:[61,84]}),v:.7,side:1,
     lv:["Manos en la cama o el sofá","Con las rodillas en el piso","Completas, pecho cerca del piso"]},
-  hombros:{n:"Toque de hombros",t:"En plancha alta, toca el hombro contrario sin mover la cadera.",a:P(PLANK,{re:[75,74],rh:[69,69]}),b:P(PLANK,{le:[75,74],lh:[69,69]}),v:1.2,side:1,
+  hombros:{n:"Toque de hombros",t:"Sin mover la cadera.",a:P(PLANK,{re:[75,74],rh:[69,69]}),b:P(PLANK,{le:[75,74],lh:[69,69]}),v:1.2,side:1,
     lv:["Con las rodillas en el piso","Plancha alta, pies separados","Pies juntos y más lento"]},
-  bicho:{n:"Bicho muerto",t:"Boca arriba: estira brazo y pierna contrarios sin despegar la espalda baja del piso.",a:BUG,b:P(BUG,{re:[20,80],rh:[8,82],lk:[70,82],lf:[88,85]}),v:.5,side:1,
+  bicho:{n:"Bicho muerto",t:"Espalda baja pegada al piso.",a:BUG,b:P(BUG,{re:[20,80],rh:[8,82],lk:[70,82],lf:[88,85]}),v:.5,side:1,
     lv:["Solo las piernas, una a la vez","Brazo y pierna contrarios","Lento: 3 segundos estirando"]},
-  plancha:{n:"Plancha",t:"Antebrazos al piso, cuerpo recto. Respira, no subas la cadera.",
+  plancha:{n:"Plancha",t:"Cuerpo recto, respira.",
     a:{s:[70,80],h:[79,77],p:[45,82],lk:[30,87],lf:[15,91],rk:[31,87],rf:[16,91],le:[70,91],lh:[82,91],re:[71,91],rh:[83,91]},
     b:{s:[70,79],h:[79,76],p:[45,80.5],lk:[30,86],lf:[15,91],rk:[31,86],rf:[16,91],le:[70,91],lh:[82,91],re:[71,91],rh:[83,91]},v:.3,side:1,
     lv:["Con las rodillas en el piso","Completa","Completa, aprieta glúteos al máximo"]},
-  burpee:{n:"Burpee sin salto",t:"Manos al piso, pies atrás uno a uno a plancha, vuelve y ponte de pie.",
+  burpee:{n:"Burpee",t:"Pies atrás a plancha, vuelve y sube en puntas.",
     a:P(S,{p:[40,66],s:[56,55],h:[64,50],re:[60,73],rh:[62,91],le:[59,73],lh:[61,91],lk:[52,72],lf:[46,91],rk:[54,72],rf:[48,91]}),b:PLANK,v:.55,side:1,c:1,
-    lv:["Manos en una silla","Paso atrás a plancha","Paso atrás y una flexión"]},
-  sentTalones:{n:"Sentadilla y puntas",t:"Baja en sentadilla y al subir quédate en puntas de pies. Sin saltar.",a:SQUAT,
+    lv:["Paso atrás, sin flexión","Pies atrás de un brinco suave","Con flexión"]},
+  sentTalones:{n:"Salto simulado",t:"Sentadilla y sube explosivo a puntas, brazos arriba.",a:SQUAT,
     b:P(S,{h:[50,11],s:[50,23],p:[50,48],lk:[49,68],lf:[48,88],rk:[52,68],rf:[51,88],le:[51,13],lh:[52,4],re:[53,13],rh:[54,4]}),v:.8,side:1,c:1,
     lv:["Brazos al frente","Brazos arriba","Rápido y potente"]},
-  patinador:{n:"Patinador sin salto",t:"Cruza una pierna atrás en diagonal y baja. Alterna de lado a lado.",a:SKATE,b:mirror(SKATE),v:1,c:1,
-    lv:["Corto y controlado","Bajando más","Rápido, tocando el piso con la mano"]},
-  perro:{n:"Perro de caza",t:"En cuatro apoyos, estira brazo y pierna contrarios. Espalda quieta como una mesa.",a:QUAD,b:P(QUAD,{re:[78,66],rh:[90,64],lk:[24,70],lf:[9,69]}),v:.4,side:1,
+  patinador:{n:"Patinador",t:"De lado a lado, cayendo suave en un pie.",a:SKATE,b:mirror(SKATE),v:1,c:1,
+    lv:["Paso largo","Brinco corto","Brinco largo, toca el piso"]},
+  perro:{n:"Perro de caza",t:"Espalda quieta como una mesa.",a:QUAD,b:P(QUAD,{re:[78,66],rh:[90,64],lk:[24,70],lf:[9,69]}),v:.4,side:1,
     lv:["Solo una pierna a la vez","Brazo y pierna contrarios","Sostén 3 segundos arriba"]},
-  lateral:{n:"Plancha lateral",t:"Ronda 1 un lado, ronda 2 el otro. Cadera arriba, cuerpo en línea.",
+  lateral:{n:"Plancha lateral",t:"Ronda 1 un lado, ronda 2 el otro.",
     a:{h:[19,70],s:[25,79],p:[50,84],re:[24,91],rh:[35,91],le:[27,67],lh:[28,56],rk:[64,88],rf:[79,91],lk:[64,87],lf:[78,89]},
     b:{h:[19,69],s:[25,78],p:[50,79],re:[24,91],rh:[35,91],le:[27,66],lh:[28,55],rk:[64,85],rf:[79,91],lk:[64,84],lf:[78,89]},v:.45,side:1,
     lv:["Rodillas apoyadas","Completa","Completa, sube y baja la cadera"]},
@@ -353,7 +354,7 @@ const EX = {
 
 // Rotación de 4 días: ningún grupo trabaja fuerte dos días seguidos.
 const ROUTINES = [
-  {n:"Piernas y cardio",     x:["stepJack","sentadilla","rodillas","zancada","escaladores","puente"]},
+  {n:"Piernas y cardio",     x:["stepJack","sentadilla","burpee","zancada","escaladores","puente"]},
   {n:"Brazos y abdomen",     x:["boxeo","flexion","rodillas","hombros","bicho","plancha"]},
   {n:"Cuerpo completo",      x:["burpee","sentTalones","patinador","perro","escaladores","lateral"]},
   {n:"Espalda y abdomen", x:["perro","sentadilla","bicho","stepJack","lateral","puente"], soft:1}
@@ -648,7 +649,6 @@ $("go").onclick=startRun;
 $("infobtn").onclick=()=>$("isheet").classList.add("on");
 $("iclose").onclick=()=>{ $("isheet").classList.remove("on"); D.seen=1; save(); };
 $("isheet").onclick=e=>{ if(e.target.id==="isheet") $("iclose").onclick(); };
-if(!D.seen) setTimeout(()=>$("isheet").classList.add("on"),400);
 renderHome();
 // si queda abierta de un día para otro, se refresca al volver
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && !RUN && $("home").classList.contains("on")) renderHome(); });
